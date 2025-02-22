@@ -1,5 +1,6 @@
 package jtomsett.fa_jotd.controller;
 
+import jakarta.validation.Valid;
 import jtomsett.fa_jotd.dao.Joke;
 import jtomsett.fa_jotd.exceptions.JokeNotFoundException;
 import jtomsett.fa_jotd.service.JokeService;
@@ -26,12 +27,12 @@ public class JokeRestController {
     }
 
     @PostMapping("/joke/add")
-    public Joke addJoke(@RequestBody Joke joke) {
+    public Joke addJoke(@RequestBody @Valid Joke joke) {
         return jokeService.addJoke(joke);
     }
 
     @PutMapping("/joke/update")
-    public Joke updateJoke(@RequestBody Joke joke) {
+    public Joke updateJoke(@RequestBody @Valid Joke joke) {
         return jokeService.updateJoke(joke);
     }
 
