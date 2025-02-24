@@ -1,6 +1,7 @@
 package jtomsett.fa_jotd.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,27 +22,29 @@ public class JokeRestController {
 
     private final JokeService jokeService;
 
-    @Operation(summary = "Find a joke by id.")
+
+
+    @Operation(summary = "Find a joke by id or date.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully found the joke", content = {
                     @Content(schema = @Schema(implementation = Joke.class), mediaType = "application/json")
             }),
             @ApiResponse(responseCode = "404", description = "Joke not found for provided id.", content = @Content()),
     })
-    @GetMapping("/joke/{id}")
-    public Joke getJoke(@PathVariable("id") Long id) {
-        return jokeService.getJokeById(id).orElseThrow(() -> new JokeNotFoundException(id));
-    }
+    @GetMapping("/joke")
+    public Joke getJoke(
+            @Parameter(name = "id", description = "Highest precedent if available.", example = "12")
+            @RequestParam(required = false) Long id,
+            @Parameter(name = "date", description = "Lower precedent than id, defaults to today's date if neither are present.", example = "2025-02-24")
+            @RequestParam(required = false) LocalDate date) {
+        if (id != null){
+            return jokeService.getJokeById(id).orElseThrow(() -> new JokeNotFoundException(id));
+        }
 
-    @Operation(summary = "Get today's joke.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Successfully found today's joke.", content = {
-                    @Content(schema = @Schema(implementation = Joke.class), mediaType = "application/json")
-            }),
-            @ApiResponse(responseCode = "404", description = "Joke not set for today.", content = @Content()),
-    })
-    @GetMapping("/joke/today")
-    public Joke getJoke() {
+        if(date != null){
+            return jokeService.getJokeByDate(date).orElseThrow(() -> new JokeNotFoundException(date));
+        }
+
         LocalDate today = LocalDate.now();
         return jokeService.getJokeByDate(today).orElseThrow(() -> new JokeNotFoundException(today));
     }

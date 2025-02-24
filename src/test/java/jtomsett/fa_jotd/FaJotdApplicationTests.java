@@ -142,7 +142,7 @@ class FaJotdApplicationTests {
 				.andExpect(jsonPath("$.date").value(now.toString()))
 				.andExpect(jsonPath("$.description").value("Funny Joke Description"));
 
-		this.mvc.perform(get("/joke/today"))
+		this.mvc.perform(get("/joke"))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.joke").value("Funny Joke"))
@@ -152,7 +152,37 @@ class FaJotdApplicationTests {
 
 	@Test
 	void getTodaysJoke_NotAvailable() throws Exception {
-		this.mvc.perform(get("/joke/today"))
+		this.mvc.perform(get("/joke"))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void getYesterdayJoke_Valid() throws Exception {
+		LocalDate now = LocalDate.now().minusDays(-1);
+		String requestBody = "{ \"joke\": \"Funny Joke\", \"date\": \""+now+"\", \"description\": \"Funny Joke Description\"}";
+		this.mvc.perform(post("/joke/add")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.id").exists())
+				.andExpect(jsonPath("$.joke").value("Funny Joke"))
+				.andExpect(jsonPath("$.date").value(now.toString()))
+				.andExpect(jsonPath("$.description").value("Funny Joke Description"));
+
+		this.mvc.perform(get("/joke?date="+now))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.joke").value("Funny Joke"))
+				.andExpect(jsonPath("$.date").value(now.toString()))
+				.andExpect(jsonPath("$.description").value("Funny Joke Description"));
+	}
+
+	@Test
+	void getYesterdayJoke_NotAvailable() throws Exception {
+		LocalDate now = LocalDate.now().minusDays(-1);
+		this.mvc.perform(get("/joke?date="+now))
 				.andExpect(status().isNotFound());
 	}
 
@@ -172,7 +202,7 @@ class FaJotdApplicationTests {
 
 		Joke savedJoke = mapper.readValue(result.getResponse().getContentAsString(), Joke.class);
 
-		this.mvc.perform(get("/joke/"+savedJoke.getId()))
+		this.mvc.perform(get("/joke?id="+savedJoke.getId()))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.id").value(savedJoke.getId()))
@@ -184,7 +214,7 @@ class FaJotdApplicationTests {
 
 	@Test
 	void getJokeById_NotFound() throws Exception {
-		this.mvc.perform(get("/joke/13"))
+		this.mvc.perform(get("/joke?id=13"))
 				.andExpect(status().isNotFound());
 	}
 
