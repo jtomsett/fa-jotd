@@ -2,6 +2,9 @@ package jtomsett.fa_jotd.service;
 
 import jakarta.validation.ValidationException;
 import jtomsett.fa_jotd.dao.Joke;
+import jtomsett.fa_jotd.exceptions.InvalidJokeException;
+import jtomsett.fa_jotd.exceptions.JokeExistsForDateException;
+import jtomsett.fa_jotd.exceptions.JokeNotFoundException;
 import jtomsett.fa_jotd.repository.JokeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,35 +20,32 @@ public class JokeServiceImpl implements JokeService {
 
 
     @Override
-    public Joke addJoke(Joke joke) throws ValidationException {
+    public Joke addJoke(Joke joke) throws JokeExistsForDateException {
 
         if (joke == null) {
             throw new ValidationException("Cannot add a null joke.");
         }
 
         if (joke.getDate() != null && jokeRepository.existsJokeByDate(joke.getDate())) {
-            throw new ValidationException("Joke already exists for the requested date.");
+            throw new JokeExistsForDateException(joke.getDate());
         }
 
         return jokeRepository.save(joke);
     }
 
     @Override
-    public Joke updateJoke(Joke joke) throws ValidationException{
+    public Joke updateJoke(Joke joke) throws InvalidJokeException, JokeNotFoundException, JokeExistsForDateException {
         if (joke == null) {
-            throw new ValidationException("Cannot update a null joke.");
+            throw new InvalidJokeException("Cannot update a null joke.");
         }
 
         if (joke.getId() == null) {
-            //attempt insert
-            return addJoke(joke);
+            throw new InvalidJokeException("Cannot update a joke without an id.");
         }
 
         Optional<Joke> oJoke = getJokeById(joke.getId());
         if (oJoke.isEmpty()) {
-            //remove id and attempt insert
-            joke.setId(null);
-            return addJoke(joke);
+            throw new JokeNotFoundException(joke.getId());
         }
 
         if(joke.getDate() != null &&
@@ -58,7 +58,7 @@ public class JokeServiceImpl implements JokeService {
                     oJokeByDate.get().getId() != null &&
                     oJoke.get().getId() != null &&
                     !oJokeByDate.get().getId().equals(oJoke.get().getId())){
-                throw new ValidationException("Joke already exists for the requested date.");
+                throw new JokeExistsForDateException("Another Joke already exists for specified date: "+joke.getDate());
             }
         }
 

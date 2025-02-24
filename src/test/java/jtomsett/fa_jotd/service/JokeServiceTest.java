@@ -2,6 +2,9 @@ package jtomsett.fa_jotd.service;
 
 import jakarta.validation.ValidationException;
 import jtomsett.fa_jotd.dao.Joke;
+import jtomsett.fa_jotd.exceptions.InvalidJokeException;
+import jtomsett.fa_jotd.exceptions.JokeExistsForDateException;
+import jtomsett.fa_jotd.exceptions.JokeNotFoundException;
 import jtomsett.fa_jotd.repository.JokeRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +50,7 @@ public class JokeServiceTest {
     @Test
     void addJokeInvalidDateTest(){
         when(jokeRepository.existsJokeByDate(Mockito.any())).thenReturn(true);
-        assertThrows(ValidationException.class, () -> jokeService.addJoke(new Joke("Joke", LocalDate.now())));
+        assertThrows(JokeExistsForDateException.class, () -> jokeService.addJoke(new Joke("Joke", LocalDate.now())));
     }
 
     //updateJoke() Tests
@@ -94,40 +97,26 @@ public class JokeServiceTest {
         when(jokeRepository.findById(incomingJoke.getId())).thenReturn(Optional.of(savedJoke));
         when(jokeRepository.findByDate(Mockito.any())).thenReturn(Optional.of(savedJoke2));
 
-        assertThrows(ValidationException.class, () -> jokeService.updateJoke(incomingJoke));
+        assertThrows(JokeExistsForDateException.class, () -> jokeService.updateJoke(incomingJoke));
     }
 
     @Test
     void updateJokeDoesNotExistTest(){
         Joke incomingJoke = new Joke("Joke", LocalDate.now());
         incomingJoke.setId(15L);
-        Joke savedJoke = new Joke(incomingJoke.getJoke(), incomingJoke.getDate());
-        savedJoke.setId(12L);
         when(jokeRepository.findById(incomingJoke.getId())).thenReturn(Optional.empty());
-        when(jokeRepository.save(incomingJoke)).thenReturn(savedJoke);
-
-        Joke returnedJoke = jokeService.updateJoke(incomingJoke);
-
-        assertEquals(returnedJoke,savedJoke);
-        assertNotNull(returnedJoke.getId());
+        assertThrows(JokeNotFoundException.class, () -> jokeService.updateJoke(incomingJoke));
     }
 
     @Test
     void updateJokeNullIdTest(){
         Joke incomingJoke = new Joke("Joke", LocalDate.now());
-        Joke savedJoke = new Joke(incomingJoke.getJoke(), incomingJoke.getDate());
-        savedJoke.setId(12L);
-        when(jokeRepository.save(incomingJoke)).thenReturn(savedJoke);
-
-        Joke returnedJoke = jokeService.updateJoke(incomingJoke);
-
-        assertEquals(returnedJoke,savedJoke);
-        assertNotNull(returnedJoke.getId());
+        assertThrows(InvalidJokeException.class, () -> jokeService.updateJoke(incomingJoke));
     }
 
     @Test
     void updateJokeNullJokeTest(){
-        assertThrows(ValidationException.class, () -> jokeService.updateJoke(null));
+        assertThrows(InvalidJokeException.class, () -> jokeService.updateJoke(null));
     }
 
 

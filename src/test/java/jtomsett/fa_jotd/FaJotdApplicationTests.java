@@ -91,7 +91,7 @@ class FaJotdApplicationTests {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestBody)
 						.accept(MediaType.APPLICATION_JSON))
-				.andExpect(status().is4xxClientError());
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -102,7 +102,7 @@ class FaJotdApplicationTests {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(requestBody)
 						.accept(MediaType.APPLICATION_JSON))
-				.andExpect(status().is4xxClientError());
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
@@ -212,9 +212,104 @@ class FaJotdApplicationTests {
 	@Test
 	void deleteJoke_NotFound() throws Exception {
 		this.mvc.perform(delete("/joke/delete/13"))
-				.andExpect(status().isNotFound());
+				.andExpect(status().isOk());
 	}
 
-	//TODO joke update tests
+	@Test
+	void updateJoke_NullObject() throws Exception {
+		this.mvc.perform(put("/joke/update")
+		.contentType(MediaType.APPLICATION_JSON)
+				.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateJoke_NullId() throws Exception {
+		LocalDate now = LocalDate.now();
+		String requestBody = "{ \"joke\": \"Funny Joke\", \"date\": \""+now+"\", \"description\": \"Funny Joke Description\"}";
+		this.mvc.perform(put("/joke/update")
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+				)
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateJoke_JokeNotFound() throws Exception {
+		LocalDate now = LocalDate.now();
+		String requestBody = "{ \"id\": 12, \"joke\": \"Funny Joke\", \"date\": \""+now+"\", \"description\": \"Funny Joke Description\"}";
+		this.mvc.perform(put("/joke/update")
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+				)
+				.andExpect(status().isNotFound());
+
+	}
+
+	@Test
+	void updateJoke_AnotherJokeForDateAlreadyExists() throws Exception {
+		LocalDate now = LocalDate.now();
+		LocalDate tomorrow = LocalDate.now().plusDays(1);
+		String requestBody = "{ \"joke\": \"Funny Joke\", \"date\": \""+now+"\", \"description\": \"Funny Joke Description\"}";
+		String requestBodyTomorrow = "{ \"joke\": \"Funny Joke\", \"date\": \""+tomorrow+"\", \"description\": \"Funny Joke Description\"}";
+		this.mvc.perform(post("/joke/add")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBodyTomorrow)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk()).andReturn();
+
+		MvcResult result = this.mvc.perform(post("/joke/add")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk()).andReturn();
+
+		ObjectMapper mapper = JsonMapper.builder()
+				.findAndAddModules()
+				.build();
+
+		Joke savedJoke = mapper.readValue(result.getResponse().getContentAsString(), Joke.class);
+
+		String updateRB = "{ \"id\": "+savedJoke.getId()+", \"joke\": \"Funny Joke\", \"date\": \""+tomorrow+"\", \"description\": \"Funny Joke Description\"}";
+		this.mvc.perform(put("/joke/update")
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON)
+						.content(updateRB)
+				)
+				.andExpect(status().isConflict());
+	}
+
+	@Test
+	void updateJoke_Valid() throws Exception {
+		LocalDate now = LocalDate.now();
+		LocalDate tomorrow = LocalDate.now().plusDays(1);
+		String requestBody = "{ \"joke\": \"Funny Joke\", \"date\": \""+now+"\", \"description\": \"Funny Joke Description\"}";
+		MvcResult result = this.mvc.perform(post("/joke/add")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestBody)
+						.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk()).andReturn();
+
+		ObjectMapper mapper = JsonMapper.builder()
+				.findAndAddModules()
+				.build();
+
+		Joke savedJoke = mapper.readValue(result.getResponse().getContentAsString(), Joke.class);
+		String updateRB = "{ \"id\": "+savedJoke.getId()+", \"joke\": \"Funnier Joke\", \"date\": \""+tomorrow+"\", \"description\": \"Funnier Joke Description\"}";
+		this.mvc.perform(put("/joke/update")
+						.contentType(MediaType.APPLICATION_JSON)
+						.accept(MediaType.APPLICATION_JSON)
+						.content(updateRB)
+				)
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+				.andExpect(jsonPath("$.id").value(savedJoke.getId()))
+				.andExpect(jsonPath("$.joke").value("Funnier Joke"))
+				.andExpect(jsonPath("$.date").value(tomorrow.toString()))
+				.andExpect(jsonPath("$.description").value("Funnier Joke Description"));
+
+	}
 
 }
